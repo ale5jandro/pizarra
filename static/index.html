@@ -12,6 +12,7 @@
 
     <script>
         window.onload = function () {
+            const size = 10
             // if (typeof window.ethereum !== 'undefined') {
             //     console.log('MetaMask is installed!');
             //     document.getElementById("debugContent").innerHTML = "MetaMask is installed!";
@@ -35,16 +36,47 @@
             //     });
             // });
 
+            const delay = ms => new Promise(res => setTimeout(res, ms));
+
+            async function printHistory(contract){
+                for(let i=0;i<size;i++){
+                    const newRow = document.createElement("tr");
+                    document.getElementById("tablaHistorial").appendChild(newRow)
+                    for(let j=0;j<size;j++){
+                        const newCell = document.createElement("td");
+                        newCell.style.width = "20px";
+                        newCell.style.height = "20px";
+                        newCell.style.cssText += `background-color:#000000`;
+                        newCell.setAttribute("data-position-history", `${i},${j}`)
+                        newRow.appendChild(newCell); 
+                    }
+                }
+                let events = await contract.queryFilter('*')
+                console.log(events)
+                tablaHistorial=[]
+                for(let i=0;i<events.length;i++){
+                    await delay(1000);
+                    document.querySelector(`[data-position-history="${events[i].args[2]},${events[i].args[1]}"]`).style.cssText += `background-color:#${events[i].args[3].substring(2)}`;
+                }
+            }
+
             getOraclePrice()
             async function getOraclePrice() {
                 const provider = new ethers.providers.Web3Provider(window.ethereum)
-                const abi = [{"inputs":[{"internalType":"uint8","name":"i","type":"uint8"},{"internalType":"uint256","name":"j","type":"uint256"},{"internalType":"bytes3","name":"value","type":"bytes3"}],"name":"set","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[],"name":"get","outputs":[{"internalType":"bytes3[10][10]","name":"","type":"bytes3[10][10]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"pizarra","outputs":[{"internalType":"bytes3","name":"","type":"bytes3"}],"stateMutability":"view","type":"function"}];
-                const addr = "0x47F7987656C8Cb81924f015b75e51877ADe281E3";
+                const abi = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint8","name":"i","type":"uint8"},{"indexed":false,"internalType":"uint8","name":"j","type":"uint8"},{"indexed":false,"internalType":"bytes3","name":"value","type":"bytes3"},{"indexed":false,"internalType":"uint256","name":"time","type":"uint256"}],"name":"changeColor","type":"event"},{"inputs":[],"name":"get","outputs":[{"internalType":"bytes3[10][10]","name":"","type":"bytes3[10][10]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"pizarra","outputs":[{"internalType":"bytes3","name":"","type":"bytes3"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint8","name":"i","type":"uint8"},{"internalType":"uint8","name":"j","type":"uint8"},{"internalType":"bytes3","name":"value","type":"bytes3"}],"name":"set","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+                const abiOLD = [{"inputs":[{"internalType":"uint8","name":"i","type":"uint8"},{"internalType":"uint256","name":"j","type":"uint256"},{"internalType":"bytes3","name":"value","type":"bytes3"}],"name":"set","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[],"name":"get","outputs":[{"internalType":"bytes3[10][10]","name":"","type":"bytes3[10][10]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"pizarra","outputs":[{"internalType":"bytes3","name":"","type":"bytes3"}],"stateMutability":"view","type":"function"}];
+                const addr = "0xA094587a400f6417d58B7C9AB681401EF29c48Ef";
+                const addrOLD = "0x47F7987656C8Cb81924f015b75e51877ADe281E3";
                 const pizzarra = new ethers.Contract(addr, abi, provider);
                 const signer = await provider.getSigner();
                 const pizzarraWithSigner = pizzarra.connect(signer);
                 let tabla = await pizzarra.get()
                 
+                pizzarra.on('changeColor', (user, i, j, value, time)=>{
+                    document.querySelector(`[data-position="${j},${i}"]`).style['background-color']=`#${value.substring(2)}`;
+                    document.querySelector(`[data-position-history="${j},${i}"]`).style['background-color']=`#${value.substring(2)}`;
+                })
+
                 for(let i=0;i<tabla.length;i++){
                     const newRow = document.createElement("tr");
                     document.getElementById("tabla").appendChild(newRow)
@@ -59,12 +91,15 @@
                         newCell.addEventListener("click", async ()=>{
                             tx = await pizzarraWithSigner.set(j, i, `0x${color.substring(1)}`);
                             await tx.wait();
-                            document.getElementById("tabla").innerHTML = '';
-                            getOraclePrice();
+                            // document.getElementById("tabla").innerHTML = '';
+                            // getOraclePrice();
                         });
                     }
 
                 }
+
+                printHistory(pizzarra)
+
             }
 
         }
@@ -105,9 +140,13 @@
             <table style='table-layout:fixed;' border='1' id="tabla">
             </table>
         </div>
-        <div style="width: 50%;">
+        <div style="width: 25%;">
             <p>Color:</p>
             <input type="color" id="colorpicker" value="#0000ff">
+        </div>
+        <div style="width: 25%;" id="historial">
+            <table style='table-layout:fixed;' border='1' id="tablaHistorial">
+            </table>
         </div>
     </div>
     <!-- Bootstrap Bundle with Popper -->
