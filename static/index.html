@@ -7,8 +7,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <script>
-        window.onload = function () {
+        window.onload = async function () {
             const size = 10
+
+            if (typeof window.ethereum === 'undefined') {
+                document.getElementById("contenedorNoApp").style.display = "flex";
+                return
+            }
+            const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+            document.getElementById("contenedorApp").style.display = "flex";
+
             
             let color="#cc0000"
             document.getElementById("colorpicker").value = color;
@@ -43,9 +51,7 @@
             async function getOraclePrice() {
                 const provider = new ethers.providers.Web3Provider(window.ethereum)
                 const abi = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint8","name":"i","type":"uint8"},{"indexed":false,"internalType":"uint8","name":"j","type":"uint8"},{"indexed":false,"internalType":"bytes3","name":"value","type":"bytes3"},{"indexed":false,"internalType":"uint256","name":"time","type":"uint256"}],"name":"changeColor","type":"event"},{"inputs":[],"name":"get","outputs":[{"internalType":"bytes3[10][10]","name":"","type":"bytes3[10][10]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"pizarra","outputs":[{"internalType":"bytes3","name":"","type":"bytes3"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint8","name":"i","type":"uint8"},{"internalType":"uint8","name":"j","type":"uint8"},{"internalType":"bytes3","name":"value","type":"bytes3"}],"name":"set","outputs":[],"stateMutability":"nonpayable","type":"function"}];
-                const abiOLD = [{"inputs":[{"internalType":"uint8","name":"i","type":"uint8"},{"internalType":"uint256","name":"j","type":"uint256"},{"internalType":"bytes3","name":"value","type":"bytes3"}],"name":"set","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[],"name":"get","outputs":[{"internalType":"bytes3[10][10]","name":"","type":"bytes3[10][10]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"pizarra","outputs":[{"internalType":"bytes3","name":"","type":"bytes3"}],"stateMutability":"view","type":"function"}];
                 const addr = "0xA094587a400f6417d58B7C9AB681401EF29c48Ef";
-                const addrOLD = "0x47F7987656C8Cb81924f015b75e51877ADe281E3";
                 const pizzarra = new ethers.Contract(addr, abi, provider);
                 const signer = await provider.getSigner();
                 const pizzarraWithSigner = pizzarra.connect(signer);
@@ -70,8 +76,6 @@
                         newCell.addEventListener("click", async ()=>{
                             tx = await pizzarraWithSigner.set(j, i, `0x${color.substring(1)}`);
                             await tx.wait();
-                            // document.getElementById("tabla").innerHTML = '';
-                            // getOraclePrice();
                         });
                     }
 
@@ -90,11 +94,10 @@
 </head>
 
 <body>
-    <div class="container">
-        <br>
-        <br>
+    <div id="contenedorNoApp" style="display: none;">
+        <h3>No MetaMask found :/</h3>
     </div>
-    <div style="display: flex; flex-direction: row;">
+    <div style="display: none; flex-direction: row;" id="contenedorApp">
         <div style="width: 50%;display: flex;justify-content:center;">
             <table style='table-layout:fixed;' border='1' id="tabla">
             </table>
